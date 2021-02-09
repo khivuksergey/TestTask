@@ -5,7 +5,9 @@ namespace TestTask
 {
     public class ReadOnlyStream : IReadOnlyStream
     {
-        private Stream _localStream;
+        
+        private readonly Stream _localStream;
+        public StreamReader ReadStream;
 
         /// <summary>
         /// Конструктор класса. 
@@ -15,10 +17,19 @@ namespace TestTask
         /// <param name="fileFullPath">Полный путь до файла для чтения</param>
         public ReadOnlyStream(string fileFullPath)
         {
-            IsEof = true;
+            ReadStream = new StreamReader(fileFullPath);
+            _localStream = ReadStream.BaseStream;
+        }
 
-            // TODO : Заменить на создание реального стрима для чтения файла!
-            _localStream = null;
+        /// <summary>
+        /// Метод для вывода содержимого потока в строковом виде
+        /// </summary>
+        public override string ToString()
+        {
+            using (var sr = new StreamReader(_localStream))
+            {
+                return sr.ReadToEnd();
+            }
         }
                 
         /// <summary>
@@ -26,8 +37,10 @@ namespace TestTask
         /// </summary>
         public bool IsEof
         {
-            get; // TODO : Заполнять данный флаг при достижении конца файла/стрима при чтении
-            private set;
+            get
+            {
+                return ReadStream.EndOfStream;
+            }
         }
 
         /// <summary>
@@ -38,9 +51,19 @@ namespace TestTask
         /// <returns>Считанный символ.</returns>
         public char ReadNextChar()
         {
-            // TODO : Необходимо считать очередной символ из _localStream
-            throw new NotImplementedException();
+            if (ReadStream.Peek() != -1)
+            {
+                return Convert.ToChar(ReadStream.Read());
+            }
+            else
+            {
+                Console.WriteLine("End of stream");
+                _localStream.Position = 0;
+                ReadStream.DiscardBufferedData();
+            }
+            throw new EndOfStreamException();
         }
+
 
         /// <summary>
         /// Сбрасывает текущую позицию потока на начало.
@@ -49,12 +72,16 @@ namespace TestTask
         {
             if (_localStream == null)
             {
-                IsEof = true;
                 return;
             }
-
             _localStream.Position = 0;
-            IsEof = false;
+            ReadStream.DiscardBufferedData();
+        }
+
+        public void Dispose()
+        {
+            _localStream.Dispose();
+            ReadStream.Dispose();
         }
     }
 }
